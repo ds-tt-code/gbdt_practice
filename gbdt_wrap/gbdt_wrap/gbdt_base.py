@@ -53,7 +53,7 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
             validation_exp, validation_obj = \
                 self.loader.get_validation_data(validation_index)
 
-            val_preds, importance, logloss = \
+            importance, logloss, val_preds = \
                 self.learn(train_exp, train_obj, validation_exp, validation_obj)
 
             oof_preds[validation_index] = val_preds
@@ -78,7 +78,7 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
             validation_obj (_type_): _description_
 
         Returns:
-            _type_: preds(予測), importance, loglossの平均
+            _type_: importance, loglossの平均, preds(予測)
         """
 
         train_exp, validation_exp = \
@@ -91,7 +91,7 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
         val_preds = self._predict(model, validation_exp)
         importance = self._get_importance(model)
         logloss = log_loss(validation_obj, val_preds)
-        return val_preds, importance, logloss
+        return importance, logloss, val_preds
 
     @abstractmethod
     def category_process(self):
