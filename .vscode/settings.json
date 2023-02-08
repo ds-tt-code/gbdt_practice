@@ -1,5 +1,12 @@
 {
     "cSpell.words": [
-        "gbdt"
+        "catboost",
+        "gbdt",
+        "lightgbm",
+        "matplotlib",
+        "pyplot",
+        "seaborn",
+        "sklearn",
+        "xgboost"
     ]
 }
