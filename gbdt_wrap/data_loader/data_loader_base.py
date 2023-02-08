@@ -24,8 +24,7 @@ class DataLoaderBase():
         self.categories = categories
         self.loader = loader
 
-        self.raw_data = self.load()
-        self.exp_val, self.obj_val = self._divide_variables(self.raw_data)
+        self.initialize_data()
 
     def load(self) -> DataFrame:
         """データをロードします
@@ -101,3 +100,8 @@ class DataLoaderBase():
         validation_exp = self.exp_val.iloc[validation_index]
         validation_obj = self.obj_val.iloc[validation_index]
         return validation_exp, validation_obj
+
+    def initialize_data(self):
+        """データを初期化します"""
+        self.raw_data = self.load()
+        self.exp_val, self.obj_val = self._divide_variables(self.raw_data)
