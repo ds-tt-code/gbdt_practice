@@ -47,27 +47,14 @@ class XGBoostWrap(GBDTBase):
         if seed:
             self.params['random_state'] = seed
 
-    def _get_model(self,
-                   train_data: xgb.DMatrix,
-                   validation_data: xgb.DMatrix) -> Booster:
-        """モデルを生成します
+    def category_process(self):
+        """カテゴリ変数処理を実行します"""
 
-        Args:
-            train_data (xgb.DMatrix): 訓練用データ
-            validation_data (xgb.DMatrix): 検証用データ
-
-        Returns:
-            _type_: _description_
-        """
-
-        return xgb.train(
-            self.params,
-            dtrain=train_data,
-            num_boost_round=self.NROUND,
-            evals=[(train_data, 'train'), (validation_data, 'valid')],
-            early_stopping_rounds=self.ESR,
-            verbose_eval=self.LOGLEVEL
-            )
+        le = LabelEncoder()
+        for cat in self.loader.categories:
+            self.loader.exp_val[cat] = le.fit_transform(
+                                    self.loader.exp_val[cat]
+                                )
 
     def _trans_data(self,
                     train_exp,
@@ -89,6 +76,28 @@ class XGBoostWrap(GBDTBase):
 
         return xgb.DMatrix(train_exp, label=train_obj), \
             xgb.DMatrix(validation_exp, label=validation_obj)
+
+    def _get_model(self,
+                   train_data: xgb.DMatrix,
+                   validation_data: xgb.DMatrix) -> Booster:
+        """モデルを生成します
+
+        Args:
+            train_data (xgb.DMatrix): 訓練用データ
+            validation_data (xgb.DMatrix): 検証用データ
+
+        Returns:
+            _type_: _description_
+        """
+
+        return xgb.train(
+            self.params,
+            dtrain=train_data,
+            num_boost_round=self.NROUND,
+            evals=[(train_data, 'train'), (validation_data, 'valid')],
+            early_stopping_rounds=self.ESR,
+            verbose_eval=self.LOGLEVEL
+            )
 
     def _predict(self,
                  model: Booster,
@@ -114,12 +123,3 @@ class XGBoostWrap(GBDTBase):
             })
 
         return importance
-
-    def category_process(self):
-        """カテゴリ変数処理を実行します"""
-
-        le = LabelEncoder()
-        for cat in self.loader.categories:
-            self.loader.exp_val[cat] = le.fit_transform(
-                                    self.loader.exp_val[cat]
-                                )

@@ -64,11 +64,6 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
         logloss = np.mean(scores_logloss)
         return importances, logloss, oof_preds
 
-    @abstractmethod
-    def category_process(self):
-        """カテゴリ変数処理を実行します"""
-        pass
-
     def learn(self,
               train_exp,
               train_obj,
@@ -97,6 +92,11 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
         importance = self._get_importance(model)
         logloss = log_loss(validation_obj, val_preds)
         return val_preds, importance, logloss
+
+    @abstractmethod
+    def category_process(self):
+        """カテゴリ変数処理を実行します"""
+        pass
 
     @abstractmethod
     def _trans_data(self,
