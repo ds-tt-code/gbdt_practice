@@ -1,5 +1,6 @@
 """GBDTのベースクラス"""
 from abc import abstractmethod
+
 import numpy as np
 from pandas import DataFrame, concat
 from sklearn.metrics import log_loss
@@ -81,13 +82,13 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
             _type_: importance, loglossの平均, preds(予測)
         """
 
-        train_exp, validation_exp = \
+        train_exp_ds, validation_exp_ds = \
             self._trans_data(train_exp,
                              train_obj,
                              validation_exp,
                              validation_obj)
 
-        model = self._get_model(train_exp, validation_exp)
+        model = self._get_model(train_exp_ds, validation_exp_ds)
         val_preds = self._predict(model, validation_exp)
         importance = self._get_importance(model)
         logloss = log_loss(validation_obj, val_preds)
@@ -150,4 +151,9 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
     @abstractmethod
     def _get_importance(self,
                         model):
+        """重要度を取得します
+
+        Args:
+            model (_type_): _description_
+        """
         pass

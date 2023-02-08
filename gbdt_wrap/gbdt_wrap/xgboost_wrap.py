@@ -4,8 +4,8 @@ from pandas import DataFrame
 from sklearn.preprocessing import LabelEncoder
 from xgboost import Booster
 
-from gbdt_wrap.gbdt_wrap.data_def import Objective, EvalMetric
 from gbdt_wrap.data_loader.data_loader_base import DataLoaderBase
+from gbdt_wrap.gbdt_wrap.data_def import EvalMetric, Objective
 from gbdt_wrap.gbdt_wrap.gbdt_base import GBDTBase
 
 
@@ -111,11 +111,19 @@ class XGBoostWrap(GBDTBase):
         Returns:
             _type_: _description_
         """
-        return model.predict(validation_exp,
+        return model.predict(xgb.DMatrix(validation_exp),
                              ntree_limit=model.best_ntree_limit)
 
     def _get_importance(self,
-                        model: Booster):
+                        model: Booster) -> DataFrame:
+        """重要度を取得します
+
+        Args:
+            model (Booster): モデル
+
+        Returns:
+            DataFrame: _description_
+        """
         score_dict = model.get_score(importance_type='gain')
         importance = DataFrame({
             'feature': list(score_dict.keys()),
