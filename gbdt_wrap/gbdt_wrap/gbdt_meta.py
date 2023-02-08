@@ -1,7 +1,8 @@
 """GBDTのメタクラス"""
+from abc import ABCMeta
 
 
-class GBDTMetaClass(type):
+class GBDTMetaClass(ABCMeta):
     """GBDTのメタクラスです"""
 
     def __new__(meta, name, bases, attributes):

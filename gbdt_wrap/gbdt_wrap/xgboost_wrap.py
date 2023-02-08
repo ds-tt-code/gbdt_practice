@@ -3,6 +3,7 @@ import numpy as np
 import xgboost as xgb
 from pandas import DataFrame, concat
 from sklearn.metrics import log_loss
+from sklearn.preprocessing import LabelEncoder
 from xgboost import Booster
 
 from gbdt_wrap.gbdt_wrap.data_def import Objective, EvalMetric
@@ -49,7 +50,7 @@ class XGBoostWrap(GBDTBase):
             self.params['random_state'] = seed
 
         # XGBoostの場合はカテゴリ変数に処理をする
-        self.loader.category_process()
+        self.category_process()
 
     def learn_cv(self, n_fold):
         """k-fold Cross Validationで学習を実行します
@@ -182,3 +183,12 @@ class XGBoostWrap(GBDTBase):
             })
 
         return importance
+
+    def category_process(self):
+        """カテゴリ変数処理を実行します"""
+
+        le = LabelEncoder()
+        for cat in self.loader.categories:
+            self.loader.exp_val[cat] = le.fit_transform(
+                                    self.loader.exp_val[cat]
+                                )

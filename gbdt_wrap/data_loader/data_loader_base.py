@@ -3,7 +3,6 @@ from typing import Tuple
 
 from pandas import DataFrame
 from sklearn.model_selection import StratifiedKFold
-from sklearn.preprocessing import LabelEncoder
 
 
 class DataLoaderBase():
@@ -76,15 +75,6 @@ class DataLoaderBase():
                    if col not in self.target]
 
         return df[feature], df[self.target]  # 目的変数
-
-    def category_process(self):
-        """カテゴリ変数処理を実行します"""
-
-        le = LabelEncoder()
-        for cat in self.categories:
-            self.exp_val[cat] = le.fit_transform(
-                                    self.exp_val[cat]
-                                )
 
     def get_train_data(self, train_index: list) -> Tuple[DataFrame, DataFrame]:
         """指定フォールドの訓練用データを取得します
