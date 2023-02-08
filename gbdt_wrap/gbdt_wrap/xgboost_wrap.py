@@ -1,8 +1,6 @@
 """XGBoostのラップクラスです"""
-import numpy as np
 import xgboost as xgb
-from pandas import DataFrame, concat
-from sklearn.metrics import log_loss
+from pandas import DataFrame
 from sklearn.preprocessing import LabelEncoder
 from xgboost import Booster
 
@@ -49,73 +47,6 @@ class XGBoostWrap(GBDTBase):
         if seed:
             self.params['random_state'] = seed
 
-        # XGBoostの場合はカテゴリ変数に処理をする
-        self.category_process()
-
-    def learn_cv(self, n_fold):
-        """k-fold Cross Validationで学習を実行します
-
-        Args:
-            n_fold (_type_): k-fold cross validation のfold数
-
-        Returns:
-            _type_: importance, loglossの平均, preds(予測)
-        """
-        importances = DataFrame()
-        scores_logloss = []
-        oof_preds = np.zeros(len(self.loader.obj_val))
-
-        for fold, (train_index, validation_index) in enumerate(
-                                                self.loader.get_nfold_indexes(
-                                                    n_fold, self.seed
-                                                )
-                                              ):
-            train_exp, train_obj = \
-                self.loader.get_train_data(train_index)
-
-            validation_exp, validation_obj = \
-                self.loader.get_validation_data(validation_index)
-
-            val_preds, importance, logloss = \
-                self.learn(train_exp, train_obj, validation_exp, validation_obj)
-
-            oof_preds[validation_index] = val_preds
-            importance['fold'] = fold
-            importances = concat([importances, importance], axis=0)
-            scores_logloss.append(logloss)
-
-        logloss = np.mean(scores_logloss)
-        return importances, logloss, oof_preds
-
-    def learn(self,
-              train_exp,
-              train_obj,
-              validation_exp,
-              validation_obj):
-        """学習を実行します
-
-        Args:
-            train_exp (_type_): _description_
-            train_obj (_type_): _description_
-            validation_exp (_type_): _description_
-            validation_obj (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-
-        train_exp, validation_exp = \
-            self._trans_to_xgboost_data(train_exp,
-                                        train_obj,
-                                        validation_exp,
-                                        validation_obj)
-
-        model = self._get_model(train_exp, validation_exp)
-        val_preds = self._predict(model, validation_exp)
-        importance = self._get_impotance(model)
-        logloss = log_loss(validation_obj, val_preds)
-        return val_preds, importance, logloss
-
     def _get_model(self,
                    train_data: xgb.DMatrix,
                    validation_data: xgb.DMatrix) -> Booster:
@@ -138,11 +69,11 @@ class XGBoostWrap(GBDTBase):
             verbose_eval=self.LOGLEVEL
             )
 
-    def _trans_to_xgboost_data(self,
-                               train_exp,
-                               train_obj,
-                               validation_exp,
-                               validation_obj):
+    def _trans_data(self,
+                    train_exp,
+                    train_obj,
+                    validation_exp,
+                    validation_obj):
         """ XGBoost用データセットの定義
             この処理を挟む事で省メモリに学習する事ができる
 
@@ -174,8 +105,8 @@ class XGBoostWrap(GBDTBase):
         return model.predict(validation_exp,
                              ntree_limit=model.best_ntree_limit)
 
-    def _get_impotance(self,
-                       model: Booster):
+    def _get_importance(self,
+                        model: Booster):
         score_dict = model.get_score(importance_type='gain')
         importance = DataFrame({
             'feature': list(score_dict.keys()),
