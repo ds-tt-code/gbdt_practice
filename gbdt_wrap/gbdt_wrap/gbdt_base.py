@@ -6,6 +6,7 @@ from pandas import DataFrame, concat
 from sklearn.metrics import log_loss
 
 from gbdt_wrap.data_loader.data_loader_base import DataLoaderBase
+from gbdt_wrap.data_loader.data_processor_base import DataProcessorBase
 from gbdt_wrap.gbdt_wrap.gbdt_meta import GBDTMetaClass
 
 
@@ -17,6 +18,7 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
 
     def __init__(self,
                  loader: DataLoaderBase,
+                 data_processor: list[DataProcessorBase],
                  seed: int = None):
         """コンストラクタ
 
@@ -25,10 +27,10 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
             seed (int, optional): _description_. Defaults to None.
         """
 
-        self.loader = loader
+        self.data = loader.load()
+        for p in data_processor:
+            p.process(self.data)
         self.seed = seed
-
-        self.category_process()
 
     def learn_cv(self, n_fold):
         """k-fold Cross Validationで学習を実行します
@@ -41,18 +43,18 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
         """
         importances = DataFrame()
         scores_logloss = []
-        oof_preds = np.zeros(len(self.loader.obj_val))
+        oof_preds = np.zeros(len(self.data.obj_val))
 
         for fold, (train_index, validation_index) in enumerate(
-                                                self.loader.get_nfold_indexes(
+                                                self.data.get_nfold_indexes(
                                                     n_fold, self.seed
                                                 )
                                               ):
             train_exp, train_obj = \
-                self.loader.get_train_data(train_index)
+                self.data.get_train_data(train_index)
 
             validation_exp, validation_obj = \
-                self.loader.get_validation_data(validation_index)
+                self.data.get_validation_data(validation_index)
 
             importance, logloss, val_preds = \
                 self.learn(train_exp, train_obj, validation_exp, validation_obj)
@@ -93,11 +95,6 @@ class GBDTBase(object, metaclass=GBDTMetaClass):
         importance = self._get_importance(model)
         logloss = log_loss(validation_obj, val_preds)
         return importance, logloss, val_preds
-
-    @abstractmethod
-    def category_process(self):
-        """カテゴリ変数処理を実行します"""
-        pass
 
     @abstractmethod
     def _trans_data(self,

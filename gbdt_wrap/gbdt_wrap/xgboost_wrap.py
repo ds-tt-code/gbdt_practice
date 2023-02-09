@@ -1,10 +1,10 @@
 """XGBoostのラップクラスです"""
 import xgboost as xgb
 from pandas import DataFrame
-from sklearn.preprocessing import LabelEncoder
 from xgboost import Booster
 
 from gbdt_wrap.data_loader.data_loader_base import DataLoaderBase
+from gbdt_wrap.data_loader.label_encorder_processor import LabelEncoderProcessor
 from gbdt_wrap.gbdt_wrap.data_def import EvalMetric, Objective
 from gbdt_wrap.gbdt_wrap.gbdt_base import GBDTBase
 
@@ -34,7 +34,9 @@ class XGBoostWrap(GBDTBase):
             max_depth (int, optional): _description_. Defaults to 4.
             seed (_type_, optional): _description_. Defaults to None.
         """
-        super().__init__(loader, seed)
+        data_processor = [LabelEncoderProcessor()]
+
+        super().__init__(loader, data_processor, seed)
 
         self.params = {
             'objective': self._OBJECTIVE_PARAM[objective],
@@ -46,15 +48,6 @@ class XGBoostWrap(GBDTBase):
 
         if seed:
             self.params['random_state'] = seed
-
-    def category_process(self):
-        """カテゴリ変数処理を実行します"""
-
-        le = LabelEncoder()
-        for cat in self.loader.categories:
-            self.loader.exp_val[cat] = le.fit_transform(
-                                    self.loader.exp_val[cat]
-                                )
 
     def _trans_data(self,
                     train_exp,

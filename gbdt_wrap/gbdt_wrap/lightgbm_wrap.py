@@ -4,6 +4,7 @@ from lightgbm import Booster
 from pandas import DataFrame
 
 from gbdt_wrap.data_loader.data_loader_base import DataLoaderBase
+from gbdt_wrap.data_loader.to_category_processor import ToCategoryProcessor
 from gbdt_wrap.gbdt_wrap.data_def import EvalMetric, Objective
 from gbdt_wrap.gbdt_wrap.gbdt_base import GBDTBase
 
@@ -33,7 +34,9 @@ class LightGBMWrap(GBDTBase):
             max_depth (int, optional): _description_. Defaults to 4.
             seed (_type_, optional): _description_. Defaults to None.
         """
-        super().__init__(loader, seed)
+        data_processor = [ToCategoryProcessor()]
+
+        super().__init__(loader, data_processor, seed)
 
         self.params = {
             'objective': self._OBJECTIVE_PARAM[objective],
@@ -46,12 +49,6 @@ class LightGBMWrap(GBDTBase):
 
         if seed:
             self.params['random_state'] = seed
-
-    def category_process(self):
-        """LightGBM用カテゴリ変数に対する処理"""
-        for cat in self.loader.categories:
-            self.loader.exp_val[cat] = \
-                self.loader.exp_val[cat].astype('category')
 
     def _trans_data(self,
                     train_exp,

@@ -4,6 +4,7 @@ from pandas import DataFrame
 from xgboost import Booster
 
 from gbdt_wrap.data_loader.data_loader_base import DataLoaderBase
+from gbdt_wrap.data_loader.na_padding_processor import NaPaddingProcessor
 from gbdt_wrap.gbdt_wrap.data_def import EvalMetric, Objective
 from gbdt_wrap.gbdt_wrap.gbdt_base import GBDTBase
 
@@ -33,7 +34,9 @@ class CatBoostWrap(GBDTBase):
             max_depth (int, optional): _description_. Defaults to 4.
             seed (_type_, optional): _description_. Defaults to None.
         """
-        super().__init__(loader, seed)
+        processor = [NaPaddingProcessor(loader.categories, '__NA__')]
+
+        super().__init__(loader, processor, seed)
 
         self.params = {
             'objective': self._OBJECTIVE_PARAM[objective],
@@ -45,17 +48,10 @@ class CatBoostWrap(GBDTBase):
         if seed:
             self.params['random_state'] = seed
 
-    def category_process(self):
-        """カテゴリ変数処理を実行します"""
-        # CatBoostでカテゴリ変数の機能を使う際は欠損を何かしらの値で埋めないといけない
-        for cat in self.loader.categories:
-            self.loader.exp_val[cat] = self.loader.exp_val[cat].astype(object)
-            self.loader.exp_val[cat].fillna('__NA__', inplace=True)
-
         # CatBoostでカテゴリ変数の機能を使うための処理
         # カラムのインデクスを渡す
-        self.cat_col_idx = [self.loader.exp_val.columns.get_loc(cat)
-                            for cat in self.loader.categories]
+        self.cat_col_idx = [self.data.exp_val.columns.get_loc(cat)
+                            for cat in self.data.categories]
 
     def _trans_data(self,
                     train_exp,
