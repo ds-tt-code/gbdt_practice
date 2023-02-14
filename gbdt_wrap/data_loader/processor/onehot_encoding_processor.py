@@ -1,14 +1,14 @@
 """one hot encodingするデータ処理クラス"""
 from sklearn.preprocessing import OneHotEncoder
+from pandas import DataFrame
 
-from gbdt_wrap.data_loader.data_processor_base import DataProcessorBase
-from gbdt_wrap.data_loader.target_data import TargetData
+from gbdt_wrap.data_loader.processor.category_processor_base import CategoryProcessorBase
 
 
-class OneHotEncodingProcessor(DataProcessorBase):
+class OneHotEncodingProcessor(CategoryProcessorBase):
     """すべてのカテゴリ変数をone hot encodingするクラスです"""
 
-    def process(self, data: TargetData):
+    def _process(self, data: DataFrame) -> DataFrame:
         """すべてのカテゴリ変数に関してone-hot-encodingします
 
         Args:
@@ -18,13 +18,16 @@ class OneHotEncodingProcessor(DataProcessorBase):
         ohe = OneHotEncoder(sparse=False, categories='auto')
 
         # カラムに対してOneHotEncoderを適用
-        ohe.fit(data.raw_data[data.categories])
+        ohe.fit(data[self.categories])
 
         # oheインスタンスからカラム名を作成
         columns = []
-        for i, t in enumerate(data.categories):
+        for i, t in enumerate(self.categories):
             columns += [f'{t}_{v}' for v in ohe.categories_[i]]
 
         # OneHotEncoderに変換
-        ohe.transform(data.raw_data[data.categories],
+        ret = data.copy()
+        ohe.transform(ret[self.categories],
                       columns=columns)
+
+        return ret

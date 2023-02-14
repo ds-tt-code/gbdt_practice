@@ -1,7 +1,7 @@
 """学習対象のデータを表すクラス"""
-from pandas import DataFrame
-from typing import Tuple
-from sklearn.model_selection import StratifiedKFold
+from logging import getLogger
+
+from pandas import DataFrame, Series, set_option
 
 
 class TargetData(object):
@@ -9,8 +9,8 @@ class TargetData(object):
 
     def __init__(self,
                  data: DataFrame,
-                 target: str,
-                 categories: list[str]):
+                 target: str = None,
+                 categories: list[str] = []):
         """コンストラクタです
 
         Args:
@@ -19,73 +19,40 @@ class TargetData(object):
             categories (list[str]): カテゴリ変数のリスト
         """
         self._raw_data = data
-        self._target = target
+        self.target = target
         self.categories = categories
-        self.model = None  # 学習済みもモデル格納用
-        self.predict_data = None  # 予測値格納用
+        self.logger = getLogger(__name__)
 
-        self.initialize_data()
+    def get_basic_info(self, unique_max=10) -> DataFrame:
+        """データの基本情報を取得します"""
+        # 行数と列数を取得
+        row_count = len(self._raw_data)
 
-    def initialize_data(self):
-        """データを初期化します"""
-        self.exp_val, self.obj_val = \
-            self._divide_variables(self._raw_data)
+        result = DataFrame(index=self._raw_data.columns)
+        non_null_count = self._raw_data.count()
+        result['types'] = self._raw_data.dtypes
+        result['count'] = row_count
+        result['non-null-count'] = non_null_count
+        result['null-count'] = result['count'] - result['non-null-count']
+        result['null%'] = result['null-count'] / result['count'] * 100
+        result['max'] = self._raw_data.max(numeric_only=True)
+        result['min'] = self._raw_data.min(numeric_only=True)
+        result['mean'] = self._raw_data.mean(numeric_only=True)
+        result['std'] = self._raw_data.std(numeric_only=True)
+        result['unique-count'] = self._raw_data.nunique()
+        result['top10 val'] = Series({col: ','.join([str((idx,
+                                                         val,
+                                                         f'{round(val/row_count * 100)}%'))
+                                                    for idx, val
+                                                    in self._raw_data[col].value_counts().items()][:unique_max])
+                                      for col in self._raw_data.columns})
 
-    def _divide_variables(self, df: DataFrame) -> Tuple[DataFrame, DataFrame]:
-        """データセットを目的変数と説明変数に分割します"""
-        feature = [col
-                   for col
-                   in df.columns
-                   if col not in self._target]
+        return result
 
-        return df[feature], df[self._target]  # 目的変数
+    def show_basic_info(self):
+        row_count, col_count = self._raw_data.shape
+        set_option('display_max_rows', row_count)
 
-    def get_nfold_indexes(self,
-                          n_fold: int,
-                          seed: int = None,
-                          ) -> Tuple[list, list]:
-        """与えられたデータを訓練用データと検証データに分割します
 
-        Args:
-            X_train (DataFrame): 説明変数
-            y_train (DataFrame): 目的変数
-            n_fold (int): fold数
 
-        Returns:
-            Tuple[list, list]: [訓練用データインデックスのリスト,
-                                検証用のインデックスのリスト]
-        """
-        self.folds = StratifiedKFold(
-            n_splits=n_fold,
-            shuffle=True
-        )
-        if seed:
-            self.folds.random_state = seed
-        return self.folds.split(self.exp_val.values,
-                                self.obj_val.values)
-
-    def get_train_data(self, train_index: list) -> Tuple[DataFrame, DataFrame]:
-        """指定フォールドの訓練用データを取得します
-        Args:
-            train_index (list): インデックス
-
-        Returns:
-            train_exp, train_obj (DataFrame, DataFrame): 説明変数, 目的変数
-        """
-
-        train_exp = self.exp_val.iloc[train_index]
-        train_obj = self.obj_val.iloc[train_index]
-        return train_exp, train_obj
-
-    def get_validation_data(self, validation_index: list) -> Tuple[DataFrame, DataFrame]:
-        """指定フォールドの検証用データを取得します
-        Args:
-            validation_index (list): インデックス
-
-        Returns:
-            validation_exp , validation_obj (DataFrame, DataFrame): 説明変数, 目的変数
-        """
-
-        validation_exp = self.exp_val.iloc[validation_index]
-        validation_obj = self.obj_val.iloc[validation_index]
-        return validation_exp, validation_obj
+        self.logger.info('===========データ基本情報=================')

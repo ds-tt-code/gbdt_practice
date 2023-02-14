@@ -1,15 +1,17 @@
 """データ読み込みのベースクラス"""
+from pandas import DataFrame
+
 from gbdt_wrap.data_loader.target_data import TargetData
-from gbdt_wrap.data_loader.data_processor_base import DataProcessorBase
+from gbdt_wrap.data_loader.processor.data_processor_base import DataProcessorBase
 
 
 class DataLoaderBase():
     """データローディングと加工を行うクラスです"""
 
     def __init__(self,
-                 target: str,
-                 categories: list[str],
                  loader: callable,
+                 target: str = None,
+                 categories: list[str] = None,
                  processor: DataProcessorBase = None):
         """コンストラクタ
 
@@ -26,6 +28,7 @@ class DataLoaderBase():
 
     def load(self) -> TargetData:
         """データをロードします
+           データ処理が指定されていた場合はデータ処理も行います
 
         Raises:
             NotImplementedError: 子クラス側で実装されていない
@@ -35,10 +38,32 @@ class DataLoaderBase():
         Returns:
             DataFrame: 読み込んだデータを返します
         """
-        if self.loader:
-            raw_data = self.loader()
-            return TargetData(raw_data,
-                              self.target,
-                              self.categories)
+        data = self._load()
 
-        raise NotImplementedError('継承して読み込み処理を実装するか読み込み関数を指定してください')
+        if self.loader:
+            data = self.loader()
+
+        if len(data) == 0:
+            raise NotImplementedError('継承して読み込み処理を実装するか読み込み関数を指定してください')
+
+        ret = self.df_to_target_data(data)
+
+        if self.processor:
+            self.processor.process(ret)
+        return ret
+
+    def _load(self) -> DataFrame:
+        return DataFrame()
+
+    def df_to_target_data(self, data: DataFrame) -> TargetData:
+        """pandasのdataframeをtargetdataに変換します
+
+        Args:
+            data (DataFrame): 読み込んだdataframe
+
+        Returns:
+            TargetData: _description_
+        """
+        return TargetData(data,
+                          self.target,
+                          self.categories)
