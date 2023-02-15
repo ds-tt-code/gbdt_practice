@@ -1,7 +1,7 @@
 """学習対象のデータを表すクラス"""
 from logging import getLogger
 
-from pandas import DataFrame, Series, set_option
+from pandas import DataFrame, Series
 
 
 class TargetData(object):
@@ -48,11 +48,3 @@ class TargetData(object):
                                       for col in self._raw_data.columns})
 
         return result
-
-    def show_basic_info(self):
-        row_count, col_count = self._raw_data.shape
-        set_option('display_max_rows', row_count)
-
-
-
-        self.logger.info('===========データ基本情報=================')
