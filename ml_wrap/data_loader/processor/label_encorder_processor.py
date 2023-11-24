@@ -14,3 +14,4 @@ class LabelEncoderProcessor(CategoryProcessorBase):
             ret[cat] = le.fit_transform(
                                     data[cat]
                        )
+        return ret

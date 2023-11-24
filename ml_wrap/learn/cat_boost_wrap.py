@@ -1,12 +1,12 @@
 """CatBoostのラップクラスです"""
 import catboost as cb
 from pandas import DataFrame
-from xgboost import Booster
 
-from gbdt_wrap.data_loader.data_loader_base import DataLoaderBase
-from gbdt_wrap.data_loader.na_padding_processor import NaPaddingProcessor
-from gbdt_wrap.gbdt_wrap.data_def import EvalMetric, Objective
-from gbdt_wrap.gbdt_wrap.gbdt_base import GBDTBase
+from ml_wrap.data_loader.processor.category_na_padding_processor import CategoryProcessorBase
+from ml_wrap.learn.data_def import EvalMetric, Objective
+from ml_wrap.learn.gbdt_base import GBDTBase
+from ml_wrap.data_loader.loader import TargetData
+from ml_wrap.learn.divider.data_divider_base import DataDividerBase
 
 
 class CatBoostWrap(GBDTBase):
@@ -20,11 +20,12 @@ class CatBoostWrap(GBDTBase):
     }
 
     def __init__(self,
-                 loader: DataLoaderBase,
+                 result_label: str = None,
                  objective: Objective = Objective.binary,
                  eval_metric: EvalMetric = EvalMetric.logloss,
                  max_depth=4,
-                 seed=None):
+                 seed=None,
+                 early_stopping_rounds: int = 20):
         """コンストラクタです
 
         Args:
@@ -34,9 +35,9 @@ class CatBoostWrap(GBDTBase):
             max_depth (int, optional): _description_. Defaults to 4.
             seed (_type_, optional): _description_. Defaults to None.
         """
-        processor = [NaPaddingProcessor(loader.categories, '__NA__')]
-
-        super().__init__(loader, processor, seed)
+        super().__init__(CategoryProcessorBase('__NA__'),
+                         result_label,
+                         early_stopping_rounds=early_stopping_rounds)
 
         self.params = {
             'objective': self._OBJECTIVE_PARAM[objective],
@@ -48,16 +49,18 @@ class CatBoostWrap(GBDTBase):
         if seed:
             self.params['random_state'] = seed
 
+    def learn(self, data: TargetData, divider: DataDividerBase):
         # CatBoostでカテゴリ変数の機能を使うための処理
         # カラムのインデクスを渡す
         self.cat_col_idx = [self.data.exp_val.columns.get_loc(cat)
                             for cat in self.data.categories]
+        super().learn(data, divider)
 
-    def _trans_data(self,
-                    train_exp,
-                    train_obj,
-                    validation_exp,
-                    validation_obj):
+    def _learn(self,
+               train_exp,
+               train_obj,
+               validation_exp,
+               validation_obj):
         """ XGBoost用データセットの定義
             この処理を挟む事で省メモリに学習する事ができる
 
@@ -71,38 +74,24 @@ class CatBoostWrap(GBDTBase):
             _type_: _description_
         """
 
-        return cb.Pool(train_exp,
-                       label=train_obj,
-                       cat_features=self.cat_col_idx), \
+        train_exp_ds, validation_exp_ds = \
+            cb.Pool(train_exp,
+                    label=train_obj,
+                    cat_features=self.cat_col_idx), \
             cb.Pool(validation_exp,
                     label=validation_obj,
                     cat_features=self.cat_col_idx)
 
-    def _get_model(self,
-                   train_data: cb.Pool,
-                   validation_data: cb.Pool) -> Booster:
-        """モデルを生成します
-
-        Args:
-            train_data (cb.Pool): 訓練用データ
-            validation_data (cb.Pool): 検証用データ
-
-        Returns:
-            _type_: _description_
-        """
-
         return cb.train(
             params=self.params,
-            dtrain=train_data,
-            num_boost_round=self.NROUND,
-            early_stopping_rounds=self.ESR,
-            eval_set=validation_data,
+            dtrain=train_exp_ds,
+            num_boost_round=self.N_ROUND,
+            early_stopping_rounds=self.early_stopping_rounds,
+            eval_set=validation_exp_ds,
             verbose_eval=self.LOGLEVEL
         )
 
-    def _predict(self,
-                 model,
-                 validation_exp: DataFrame):
+    def _predict(self, model, validation_exp: DataFrame):
         """Out of Fold法を用いて訓練データの予測を行う
 
         Args:
@@ -118,8 +107,7 @@ class CatBoostWrap(GBDTBase):
                             ntree_end=model.best_iteration_)
         return ret[:, 1]
 
-    def _get_importance(self,
-                        model) -> DataFrame:
+    def calc_importance(self, model):
         """重要度を取得します
 
         Args:
@@ -128,9 +116,7 @@ class CatBoostWrap(GBDTBase):
         Returns:
             DataFrame: _description_
         """
-        importance = DataFrame({
+        return {
             'feature': list(model.feature_names_),
             'gain': list(model.feature_importances_),
-            })
-
-        return importance
+        }

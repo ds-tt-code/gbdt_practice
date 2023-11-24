@@ -8,6 +8,8 @@ class ToCategoryProcessor(CategoryProcessorBase):
     """カテゴリ変数のカラムをcategory型に変換します"""
 
     def _process(self, data: DataFrame) -> DataFrame:
+        ret = data.copy()
         for cat in self.categories:
-            data[cat] = \
+            ret[cat] = \
                 data[cat].astype('category')
+        return ret

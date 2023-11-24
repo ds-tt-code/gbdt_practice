@@ -1,7 +1,7 @@
 """GBDTを実行するクラス"""
 from seaborn import barplot
 
-from gbdt_wrap.gbdt_wrap.gbdt_base import GBDTBase
+from ml_wrap.learn.gbdt_base import GBDTBase
 
 
 class GBDTExecutor(object):

@@ -1,3 +1,4 @@
 /.env
 *.pyc
 /catboost_info
+/sample_data
